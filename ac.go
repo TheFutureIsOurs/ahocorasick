@@ -1,0 +1,358 @@
+/*
+ * @Author: Daiming Liu (xingrufeng)
+ */
+
+package ahocorasick
+
+import (
+	"errors"
+	"fmt"
+	"sort"
+)
+
+const (
+	initSize  int = 64
+	rootIndex int = 0
+	rootBase  int = 1
+	failState int = -1
+)
+
+// Ac result shape of AhoCorasick
+type Ac struct {
+	doubleArrayTrie
+	fail   []int
+	value  [][]rune
+	output map[int][]int
+}
+
+// doubleArrayTrie the AhoCorasick's base implication
+type doubleArrayTrie struct {
+	base  []int
+	check []int
+}
+
+// acBuild the middle of AC
+type acBuild struct {
+	trie   *doubleArrayTrie
+	fail   []int
+	value  [][]rune
+	output map[int][]int
+}
+
+// Build a ahocorasick based on double array trie
+func Build(dict map[string]string) (*Ac, error) {
+	if len(dict) == 0 {
+		return nil, errors.New("Empty keywords to build")
+	}
+
+	ab := &acBuild{}
+	ab.buildTrie(dict)
+	ac := &Ac{
+		doubleArrayTrie: doubleArrayTrie{
+			base:  ab.trie.base,
+			check: ab.trie.check,
+		},
+		fail:   ab.fail,
+		value:  ab.value,
+		output: ab.output,
+	}
+	return ac, nil
+}
+
+// node a node of tree
+type node struct {
+	code                            rune
+	depth, base, index, left, right int
+	term                            bool // check is the leaf node
+	children                        []*node
+}
+
+// tree.
+type tree struct {
+	root *node
+}
+
+type dartsKey []rune
+type dartsKeySlice []dartsKey
+
+func (k dartsKeySlice) Len() int {
+	return len(k)
+}
+
+func (k dartsKeySlice) Less(i, j int) bool {
+	var l int
+	if len(k[i]) < len(k[j]) {
+		l = len(k[i])
+	} else {
+		l = len(k[j])
+	}
+
+	for m := 0; m < l; m++ {
+		if k[i][m] < k[j][m] {
+			return true
+		} else if k[i][m] == k[j][m] {
+			continue
+		} else {
+			return false
+		}
+	}
+	if len(k[i]) < len(k[j]) {
+		return true
+	}
+	return false
+}
+
+func (k dartsKeySlice) Swap(i, j int) {
+	k[i], k[j] = k[j], k[i]
+}
+
+type dartsBuild struct {
+	dat          *doubleArrayTrie
+	tree         *tree
+	fail         []int
+	keys         dartsKeySlice
+	nextCheckPos int
+	used         []bool
+}
+
+func (darts *dartsBuild) resize(newSize int) {
+	darts.dat.base = append(darts.dat.base, make([]int, newSize-len(darts.dat.base))...)
+	darts.dat.check = append(darts.dat.check, make([]int, newSize-len(darts.dat.check))...)
+	darts.fail = append(darts.fail, make([]int, newSize-len(darts.fail))...)
+}
+
+// getChildren get the parent's children from dartsBuild
+func (darts *dartsBuild) getChildren(parent *node) []*node {
+	children := []*node{}
+	var prev rune = 0
+	for i := parent.left; i < parent.right; i++ {
+		var cur rune = 0
+		if len(darts.keys[i]) != parent.depth {
+			cur = darts.keys[i][parent.depth]
+		} else {
+			parent.term = true
+		}
+
+		if cur != prev {
+			tmpNode := &node{
+				depth: parent.depth + 1,
+				code:  cur,
+				left:  i,
+				base:  parent.base,
+				term:  false,
+			}
+			if len(children) != 0 {
+				children[len(children)-1].right = i
+				parent.children[len(parent.children)-1].right = i
+			}
+			children = append(children, tmpNode)
+			parent.children = append(parent.children, tmpNode)
+		}
+		prev = cur
+	}
+
+	if len(children) != 0 {
+		children[len(children)-1].right = parent.right
+		parent.children[len(children)-1].right = parent.right
+	}
+
+	return children
+}
+
+func max(m, n int) int {
+	if m > n {
+		return m
+	}
+	return n
+}
+
+// getBegin return the no use begin to fill parent's children
+func (darts *dartsBuild) getBegin(parent *node) int {
+	begin := 0
+	pos := max(int(parent.children[0].code), darts.nextCheckPos)
+	first := false
+	for {
+	next:
+		pos++
+		if len(darts.dat.base) <= pos {
+			darts.resize(pos + initSize)
+		}
+		if 0 != darts.dat.base[pos] {
+			continue
+		} else if !first {
+			darts.nextCheckPos = pos
+			first = true
+		}
+		begin = pos - int(parent.children[0].code)
+		if len(darts.dat.base) <= (begin + int(parent.children[len(parent.children)-1].code)) {
+			darts.resize(begin + int(parent.children[len(parent.children)-1].code) + initSize)
+		}
+
+		for _, v := range parent.children {
+			index := begin + int(v.code)
+			if 0 != darts.dat.base[index] {
+				goto next
+			}
+		}
+		break
+	}
+	return begin
+}
+
+// setBC set base and check
+func (darts *dartsBuild) setBC(parent *node) {
+	if len(parent.children) == 0 {
+		begin := parent.base
+		darts.dat.base[parent.index] = -begin
+	} else {
+		begin := 0
+		if parent.depth == 0 {
+			begin = parent.base
+		} else {
+			begin = darts.getBegin(parent)
+			parent.base = begin
+		}
+
+		if parent.term {
+			darts.dat.base[parent.index] = -begin
+		} else {
+			darts.dat.base[parent.index] = begin
+		}
+		for _, v := range parent.children {
+			pos := begin + int(v.code)
+			v.index = pos
+			v.base = begin
+			if len(darts.dat.base) <= pos {
+				darts.resize(pos + initSize)
+			}
+			darts.dat.base[pos] = begin
+			darts.dat.check[pos] = parent.index
+		}
+	}
+}
+
+func getAbs(n int) int {
+	if n >= 0 {
+		return n
+	}
+	return -n
+}
+
+// getState give a inState, output index
+func (dat *doubleArrayTrie) getState(inState int, code rune) int {
+	b := getAbs(dat.base[inState])
+	p := b + int(code)
+	if p >= len(dat.base) {
+		if inState == rootIndex {
+			return rootIndex
+		}
+		return failState
+	}
+
+	if dat.base[p] != 0 && inState == dat.check[p] {
+		return p
+	}
+	if inState == rootIndex {
+		return rootIndex
+	}
+	return failState
+}
+
+// buildTrie build trie what we need
+func (ab *acBuild) buildTrie(dict map[string]string) {
+	darts := &dartsBuild{}
+	// the length we know is equal to keywords
+	darts.keys = make(dartsKeySlice, len(dict))
+
+	i := 0
+	for k := range dict {
+		darts.keys[i] = []rune(k)
+		i++
+	}
+	//fmt.Printf("%#v", darts)
+	sort.Sort(darts.keys)
+
+	// we get the dict's values
+	ab.value = make([][]rune, len(darts.keys))
+	for i := 0; i < len(darts.keys); i++ {
+		ab.value[i] = []rune(dict[string(darts.keys[i])])
+	}
+
+	darts.dat = &doubleArrayTrie{}
+	darts.resize(initSize)
+
+	darts.tree = &tree{}
+	darts.tree.root = &node{
+		depth: 0,
+		left:  0,
+		right: len(darts.keys),
+		base:  rootBase,
+		index: rootIndex,
+		term:  false,
+	}
+	ab.output = map[int][]int{}
+	queue := []*node{darts.tree.root}
+
+	for len(queue) != 0 {
+		node := queue[0]
+		queue = queue[1:]
+
+		children := darts.getChildren(node)
+		if len(children) != 0 {
+			queue = append(queue, children...)
+		}
+		darts.setBC(node)
+
+		if node.term {
+			ab.output[node.index] = append(ab.output[node.index], node.left)
+		}
+
+		if node.depth == 0 || node.depth == 1 {
+			darts.fail[node.index] = rootIndex
+			continue
+		}
+		pIndex := darts.dat.check[node.index]
+		inState := darts.fail[pIndex]
+	set_state:
+		outState := darts.dat.getState(inState, node.code)
+		if outState == failState {
+			inState = darts.fail[inState]
+			goto set_state
+		}
+		if value, ok := ab.output[outState]; ok != false {
+			ab.output[node.index] = append(ab.output[node.index], value...)
+		}
+		darts.fail[node.index] = outState
+	}
+	ab.trie = darts.dat
+	ab.fail = darts.fail
+}
+
+// Hit the result hit
+type Hit struct {
+	Begin int
+	End   int
+	Value [][]rune
+}
+
+// MultiPatternSearch ...
+func (ac *Ac) MultiPatternSearch(content []rune) {
+	//hits := []Hit{}
+	res := []string{}
+	state := rootIndex
+	for _, v := range content {
+	start:
+		if ac.getState(state, v) == failState {
+			state = ac.fail[state]
+			goto start
+		} else {
+			state = ac.getState(state, v)
+			if val, ok := ac.output[state]; ok {
+				for _, vv := range val {
+					res = append(res, string(ac.value[vv]))
+				}
+			}
+		}
+	}
+	fmt.Println(res)
+}
