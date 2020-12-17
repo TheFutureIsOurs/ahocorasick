@@ -5,9 +5,11 @@
 package ahocorasick
 
 import (
+	"bufio"
 	"errors"
-	"fmt"
+	"os"
 	"sort"
+	"strings"
 )
 
 const (
@@ -21,7 +23,6 @@ const (
 type Ac struct {
 	doubleArrayTrie
 	fail   []int
-	value  [][]rune
 	output map[int][]int
 }
 
@@ -35,25 +36,72 @@ type doubleArrayTrie struct {
 type acBuild struct {
 	trie   *doubleArrayTrie
 	fail   []int
-	value  [][]rune
 	output map[int][]int
 }
 
-// Build a ahocorasick based on double array trie
-func Build(dict map[string]string) (*Ac, error) {
-	if len(dict) == 0 {
+// readLine read file line by line and drop one line's length >4096
+func readLine(r *bufio.Reader) (string, error) {
+	line, isprefix, err := r.ReadLine()
+	// drop
+	for isprefix && err == nil {
+		_, isprefix, err = r.ReadLine()
+	}
+	return string(line), err
+}
+
+// BuildFromFile build ac from file
+func BuildFromFile(inputfile string) (*Ac, error) {
+	file, err := os.Open(inputfile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	bufReader := bufio.NewReader(file)
+	keywords := [][]rune{}
+	for {
+		line, err := readLine(bufReader)
+		if err != nil {
+			break
+		}
+		keyword := strings.TrimSpace(line)
+		if keyword == "" {
+			continue
+		}
+		keywords = append(keywords, []rune(keyword))
+	}
+	if len(keywords) == 0 {
 		return nil, errors.New("Empty keywords to build")
 	}
-
 	ab := &acBuild{}
-	ab.buildTrie(dict)
+	ab.buildTrie(keywords)
 	ac := &Ac{
 		doubleArrayTrie: doubleArrayTrie{
 			base:  ab.trie.base,
 			check: ab.trie.check,
 		},
 		fail:   ab.fail,
-		value:  ab.value,
+		output: ab.output,
+	}
+	return ac, nil
+}
+
+// Build a ahocorasick based on double array trie
+func Build(keywords []string) (*Ac, error) {
+	if len(keywords) == 0 {
+		return nil, errors.New("Empty keywords to build")
+	}
+	kws := make([][]rune, len(keywords))
+	for k, v := range keywords {
+		kws[k] = []rune(v)
+	}
+	ab := &acBuild{}
+	ab.buildTrie(kws)
+	ac := &Ac{
+		doubleArrayTrie: doubleArrayTrie{
+			base:  ab.trie.base,
+			check: ab.trie.check,
+		},
+		fail:   ab.fail,
 		output: ab.output,
 	}
 	return ac, nil
@@ -259,24 +307,15 @@ func (dat *doubleArrayTrie) getState(inState int, code rune) int {
 }
 
 // buildTrie build trie what we need
-func (ab *acBuild) buildTrie(dict map[string]string) {
+func (ab *acBuild) buildTrie(keywords [][]rune) {
 	darts := &dartsBuild{}
 	// the length we know is equal to keywords
-	darts.keys = make(dartsKeySlice, len(dict))
+	darts.keys = make(dartsKeySlice, len(keywords))
 
-	i := 0
-	for k := range dict {
-		darts.keys[i] = []rune(k)
-		i++
+	for k, v := range keywords {
+		darts.keys[k] = v
 	}
-	//fmt.Printf("%#v", darts)
 	sort.Sort(darts.keys)
-
-	// we get the dict's values
-	ab.value = make([][]rune, len(darts.keys))
-	for i := 0; i < len(darts.keys); i++ {
-		ab.value[i] = []rune(dict[string(darts.keys[i])])
-	}
 
 	darts.dat = &doubleArrayTrie{}
 	darts.resize(initSize)
@@ -304,7 +343,7 @@ func (ab *acBuild) buildTrie(dict map[string]string) {
 		darts.setBC(node)
 
 		if node.term {
-			ab.output[node.index] = append(ab.output[node.index], node.left)
+			ab.output[node.index] = append(ab.output[node.index], len(darts.keys[node.left]))
 		}
 
 		if node.depth == 0 || node.depth == 1 {
@@ -332,15 +371,14 @@ func (ab *acBuild) buildTrie(dict map[string]string) {
 type Hit struct {
 	Begin int
 	End   int
-	Value [][]rune
+	Value []rune
 }
 
 // MultiPatternSearch ...
-func (ac *Ac) MultiPatternSearch(content []rune) {
-	//hits := []Hit{}
-	res := []string{}
+func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
+	hits := []Hit{}
 	state := rootIndex
-	for _, v := range content {
+	for k, v := range content {
 	start:
 		if ac.getState(state, v) == failState {
 			state = ac.fail[state]
@@ -349,10 +387,15 @@ func (ac *Ac) MultiPatternSearch(content []rune) {
 			state = ac.getState(state, v)
 			if val, ok := ac.output[state]; ok {
 				for _, vv := range val {
-					res = append(res, string(ac.value[vv]))
+					hit := Hit{
+						Begin: k - vv + 1,
+						End:   k,
+						Value: content[k-vv+1 : k+1],
+					}
+					hits = append(hits, hit)
 				}
 			}
 		}
 	}
-	fmt.Println(res)
+	return hits
 }
