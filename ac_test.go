@@ -68,15 +68,16 @@ func writeFile(filename string, contents []Hit) {
 func TestBuild(t *testing.T) {
 	start := time.Now().UnixNano()
 	ac, err := BuildFromFile("./dictionary.txt")
+	//ac, err := BuildFromFile("./black.txt")
 	fmt.Println(err)
 	runTime := (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("字典加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	//content := readFile("./text.txt")
+	content := readFile("./text.txt")
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("测试文件加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	//ac.MultiPatternSearch(content)
+	result := ac.MultiPatternSearch(content)
 	search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
@@ -84,27 +85,38 @@ func TestBuild(t *testing.T) {
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("检索时间(ms)", runTime)
 
-	//writeFile("result", result)
+	writeFile("result2", result)
 
 }
 
 func TestAb(t *testing.T) {
-
 	/*
 		kws := []string{
 			"hers", "his", "she", "he",
 		}
 	*/
-
+	/*
+		kws := []string{
+			"中华人民共和国", "中华人民", "人民共和国", "中华人民",
+		}
+	*/
 	kws := []string{
-		"中华人民共和国", "中华人民", "人民共和国", "中华人民",
+		"一", "群", "一群羊",
 	}
 	ac, err := Build(kws)
+	//ac, err := Build(kws)
+	//ac, err := BuildFromFile("./dictionary.txt")
 	if err != nil {
 		fmt.Println(err)
 	}
-	search := ac.MultiPatternSearch([]rune("中华人民共和国"))
+	//search := ac.MultiPatternSearch([]rune("中华人民共和国"))
+	//search := ac.MultiPatternSearch([]rune("ushers"))
+	search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
 	}
+}
+
+func TestWord(t *testing.T) {
+	fmt.Println([]rune("一"), []rune("群"))
 }

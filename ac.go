@@ -23,20 +23,14 @@ const (
 type Ac struct {
 	doubleArrayTrie
 	fail   []int
-	output map[int][]int
+	value  [][]int
+	output map[int]int
 }
 
 // doubleArrayTrie the AhoCorasick's base implication
 type doubleArrayTrie struct {
 	base  []int
 	check []int
-}
-
-// acBuild the middle of AC
-type acBuild struct {
-	trie   *doubleArrayTrie
-	fail   []int
-	output map[int][]int
 }
 
 // readLine read file line by line and drop one line's length >4096
@@ -72,16 +66,8 @@ func BuildFromFile(inputfile string) (*Ac, error) {
 	if len(keywords) == 0 {
 		return nil, errors.New("Empty keywords to build")
 	}
-	ab := &acBuild{}
-	ab.buildTrie(keywords)
-	ac := &Ac{
-		doubleArrayTrie: doubleArrayTrie{
-			base:  ab.trie.base,
-			check: ab.trie.check,
-		},
-		fail:   ab.fail,
-		output: ab.output,
-	}
+	ac := &Ac{}
+	ac.buildTrie(keywords)
 	return ac, nil
 }
 
@@ -94,16 +80,8 @@ func Build(keywords []string) (*Ac, error) {
 	for k, v := range keywords {
 		kws[k] = []rune(v)
 	}
-	ab := &acBuild{}
-	ab.buildTrie(kws)
-	ac := &Ac{
-		doubleArrayTrie: doubleArrayTrie{
-			base:  ab.trie.base,
-			check: ab.trie.check,
-		},
-		fail:   ab.fail,
-		output: ab.output,
-	}
+	ac := &Ac{}
+	ac.buildTrie(kws)
 	return ac, nil
 }
 
@@ -158,6 +136,7 @@ type dartsBuild struct {
 	dat          *doubleArrayTrie
 	tree         *tree
 	fail         []int
+	value        [][]int
 	keys         dartsKeySlice
 	nextCheckPos int
 	used         []bool
@@ -167,6 +146,7 @@ func (darts *dartsBuild) resize(newSize int) {
 	darts.dat.base = append(darts.dat.base, make([]int, newSize-len(darts.dat.base))...)
 	darts.dat.check = append(darts.dat.check, make([]int, newSize-len(darts.dat.check))...)
 	darts.fail = append(darts.fail, make([]int, newSize-len(darts.fail))...)
+	darts.value = append(darts.value, make([][]int, newSize-len(darts.value))...)
 }
 
 // getChildren get the parent's children from dartsBuild
@@ -307,7 +287,7 @@ func (dat *doubleArrayTrie) getState(inState int, code rune) int {
 }
 
 // buildTrie build trie what we need
-func (ab *acBuild) buildTrie(keywords [][]rune) {
+func (ac *Ac) buildTrie(keywords [][]rune) {
 	darts := &dartsBuild{}
 	// the length we know is equal to keywords
 	darts.keys = make(dartsKeySlice, len(keywords))
@@ -329,7 +309,8 @@ func (ab *acBuild) buildTrie(keywords [][]rune) {
 		index: rootIndex,
 		term:  false,
 	}
-	ab.output = map[int][]int{}
+	ac.output = map[int]int{}
+
 	queue := []*node{darts.tree.root}
 
 	for len(queue) != 0 {
@@ -343,7 +324,8 @@ func (ab *acBuild) buildTrie(keywords [][]rune) {
 		darts.setBC(node)
 
 		if node.term {
-			ab.output[node.index] = append(ab.output[node.index], len(darts.keys[node.left]))
+			ac.output[node.index] = node.index
+			darts.value[node.index] = append(darts.value[node.index], len(darts.keys[node.left]))
 		}
 
 		if node.depth == 0 || node.depth == 1 {
@@ -358,13 +340,16 @@ func (ab *acBuild) buildTrie(keywords [][]rune) {
 			inState = darts.fail[inState]
 			goto set_state
 		}
-		if value, ok := ab.output[outState]; ok != false {
-			ab.output[node.index] = append(ab.output[node.index], value...)
+		if value, ok := ac.output[outState]; ok != false {
+			ac.output[node.index] = node.index
+			darts.value[node.index] = append(darts.value[node.index], darts.value[value]...)
 		}
 		darts.fail[node.index] = outState
 	}
-	ab.trie = darts.dat
-	ab.fail = darts.fail
+	ac.base = darts.dat.base
+	ac.check = darts.dat.check
+	ac.fail = darts.fail
+	ac.value = darts.value
 }
 
 // Hit the result hit
@@ -386,7 +371,7 @@ func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
 		} else {
 			state = ac.getState(state, v)
 			if val, ok := ac.output[state]; ok {
-				for _, vv := range val {
+				for _, vv := range ac.value[val] {
 					hit := Hit{
 						Begin: k - vv + 1,
 						End:   k,

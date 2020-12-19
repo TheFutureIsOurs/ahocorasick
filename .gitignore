@@ -1,3 +1,6 @@
 *.txt
+<<<<<<< HEAD
 result
+=======
+>>>>>>> test
 result*
