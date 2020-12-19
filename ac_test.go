@@ -72,11 +72,15 @@ func TestBuild(t *testing.T) {
 	runTime := (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("字典加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	content := readFile("./text.txt")
+	//content := readFile("./text.txt")
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("测试文件加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	ac.MultiPatternSearch(content)
+	//ac.MultiPatternSearch(content)
+	search := ac.MultiPatternSearch([]rune("中华人民共和国"))
+	for _, v := range search {
+		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
+	}
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("检索时间(ms)", runTime)
 
