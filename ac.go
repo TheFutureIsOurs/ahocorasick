@@ -7,7 +7,6 @@ package ahocorasick
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -23,9 +22,9 @@ const (
 // Ac result shape of AhoCorasick
 type Ac struct {
 	doubleArrayTrie
-	fail    []int
-	keysLen [][]int
-	output  map[int]int
+	fail   []int
+	value  [][]int
+	output map[int]int
 }
 
 // doubleArrayTrie the AhoCorasick's base implication
@@ -137,6 +136,7 @@ type dartsBuild struct {
 	dat          *doubleArrayTrie
 	tree         *tree
 	fail         []int
+	value        [][]int
 	keys         dartsKeySlice
 	nextCheckPos int
 	used         []bool
@@ -146,6 +146,7 @@ func (darts *dartsBuild) resize(newSize int) {
 	darts.dat.base = append(darts.dat.base, make([]int, newSize-len(darts.dat.base))...)
 	darts.dat.check = append(darts.dat.check, make([]int, newSize-len(darts.dat.check))...)
 	darts.fail = append(darts.fail, make([]int, newSize-len(darts.fail))...)
+	darts.value = append(darts.value, make([][]int, newSize-len(darts.value))...)
 }
 
 // getChildren get the parent's children from dartsBuild
@@ -296,13 +297,6 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 	}
 	sort.Sort(darts.keys)
 
-	// set the keyword's length
-	ac.keysLen = make([][]int, len(darts.keys))
-
-	for k, v := range darts.keys {
-		ac.keysLen[k] = []int{len(v)}
-	}
-
 	darts.dat = &doubleArrayTrie{}
 	darts.resize(initSize)
 
@@ -331,12 +325,8 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 
 		if node.term {
 			//ab.output[node.index] = append(ab.output[node.index], len(darts.keys[node.left]))
-			ac.output[node.index] = node.left
-			if len(darts.keys[node.left]) == 1 && darts.keys[node.left][0] == 32676 {
-				fmt.Println(node.index, node.left)
-
-			}
-			//ac.keysLen[node.left] = append(ac.keysLen[node.left], len(darts.keys[node.left]))
+			ac.output[node.index] = node.index
+			darts.value[node.index] = append(darts.value[node.index], len(darts.keys[node.left]))
 		}
 
 		if node.depth == 0 || node.depth == 1 {
@@ -353,14 +343,15 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 		}
 		if value, ok := ac.output[outState]; ok != false {
 			//ab.output[node.index] = append(ab.output[node.index], value...)
-			ac.keysLen[node.left] = append(ac.keysLen[node.left], ac.keysLen[value]...)
+			ac.output[node.index] = node.index
+			darts.value[node.index] = append(darts.value[node.index], darts.value[value]...)
 		}
 		darts.fail[node.index] = outState
 	}
 	ac.base = darts.dat.base
 	ac.check = darts.dat.check
 	ac.fail = darts.fail
-	fmt.Println(ac.output[32677], ac.keysLen[113697])
+	ac.value = darts.value
 }
 
 // Hit the result hit
@@ -382,7 +373,7 @@ func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
 		} else {
 			state = ac.getState(state, v)
 			if val, ok := ac.output[state]; ok {
-				for _, vv := range ac.keysLen[val] {
+				for _, vv := range ac.value[val] {
 					hit := Hit{
 						Begin: k - vv + 1,
 						End:   k,

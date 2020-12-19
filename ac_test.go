@@ -77,8 +77,8 @@ func TestBuild(t *testing.T) {
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("测试文件加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	ac.MultiPatternSearch(content)
-	//result := ac.MultiPatternSearch(content)
+	//ac.MultiPatternSearch(content)
+	result := ac.MultiPatternSearch(content)
 	search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
@@ -86,25 +86,23 @@ func TestBuild(t *testing.T) {
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("检索时间(ms)", runTime)
 
-	//writeFile("result2", result)
+	writeFile("result2", result)
 
 }
 
 func TestAb(t *testing.T) {
-
 	/*
 		kws := []string{
 			"hers", "his", "she", "he",
 		}
 	*/
-
 	/*
 		kws := []string{
 			"中华人民共和国", "中华人民", "人民共和国", "中华人民",
 		}
 	*/
 	kws := []string{
-		"抗", "抗战", "战", "末", "末期", "期", "，", "一", "群", "溃", "溃败", "败", "下", "下来",
+		"一", "群", "一群羊",
 	}
 	ac, err := Build(kws)
 	//ac, err := Build(kws)
@@ -114,7 +112,7 @@ func TestAb(t *testing.T) {
 	}
 	//search := ac.MultiPatternSearch([]rune("中华人民共和国"))
 	//search := ac.MultiPatternSearch([]rune("ushers"))
-	search := ac.MultiPatternSearch([]rune("抗战末期，一群溃败下来的国民党士兵"))
+	search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
 	}
