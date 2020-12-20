@@ -24,8 +24,7 @@ const (
 type Ac struct {
 	doubleArrayTrie
 	fail   []int
-	value  [][]int
-	output map[int]int
+	output []int // maxLength of suffix
 }
 
 // doubleArrayTrie the AhoCorasick's base implication
@@ -137,7 +136,7 @@ type dartsBuild struct {
 	dat          *doubleArrayTrie
 	tree         *tree
 	fail         []int
-	value        [][]int
+	output       []int
 	keys         dartsKeySlice
 	nextCheckPos int
 	used         []bool
@@ -147,7 +146,7 @@ func (darts *dartsBuild) resize(newSize int) {
 	darts.dat.base = append(darts.dat.base, make([]int, newSize-len(darts.dat.base))...)
 	darts.dat.check = append(darts.dat.check, make([]int, newSize-len(darts.dat.check))...)
 	darts.fail = append(darts.fail, make([]int, newSize-len(darts.fail))...)
-	darts.value = append(darts.value, make([][]int, newSize-len(darts.value))...)
+	darts.output = append(darts.output, make([]int, newSize-len(darts.output))...)
 }
 
 // getChildren get the parent's children from dartsBuild
@@ -310,7 +309,6 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 		index: rootIndex,
 		term:  false,
 	}
-	ac.output = map[int]int{}
 
 	queue := []*node{darts.tree.root}
 
@@ -325,8 +323,7 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 		darts.setBC(node)
 
 		if node.term {
-			ac.output[node.index] = node.index
-			darts.value[node.index] = append(darts.value[node.index], len(darts.keys[node.left]))
+			darts.output[node.index] = len(darts.keys[node.left])
 		}
 
 		if node.depth == 0 || node.depth == 1 {
@@ -341,16 +338,15 @@ func (ac *Ac) buildTrie(keywords [][]rune) {
 			inState = darts.fail[inState]
 			goto set_state
 		}
-		if value, ok := ac.output[outState]; ok != false {
-			ac.output[node.index] = node.index
-			darts.value[node.index] = append(darts.value[node.index], darts.value[value]...)
+		if value := darts.output[outState]; value != 0 && value > darts.output[node.index] {
+			darts.output[node.index] = value
 		}
 		darts.fail[node.index] = outState
 	}
 	ac.base = darts.dat.base
 	ac.check = darts.dat.check
 	ac.fail = darts.fail
-	ac.value = darts.value
+	ac.output = darts.output
 }
 
 // Hit the result hit
@@ -371,15 +367,13 @@ func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
 			goto start
 		} else {
 			state = ac.getState(state, v)
-			if val, ok := ac.output[state]; ok {
-				for _, vv := range ac.value[val] {
-					hit := Hit{
-						Begin: k - vv + 1,
-						End:   k,
-						Value: content[k-vv+1 : k+1],
-					}
-					hits = append(hits, hit)
+			if val := ac.output[state]; val != 0 {
+				hit := Hit{
+					Begin: k - val + 1,
+					End:   k,
+					Value: content[k-val+1 : k+1],
 				}
+				hits = append(hits, hit)
 			}
 		}
 	}
@@ -397,10 +391,8 @@ func (ac *Ac) MultiPatternIndexes(content []rune) []int {
 			goto start
 		} else {
 			state = ac.getState(state, v)
-			if val, ok := ac.output[state]; ok {
-				for _, vv := range ac.value[val] {
-					hits = append(hits, k-vv+1)
-				}
+			if val := ac.output[state]; val != 0 {
+				hits = append(hits, k-val+1)
 			}
 		}
 	}
@@ -418,7 +410,7 @@ func (ac *Ac) MultiPatternHit(content []rune) bool {
 			goto start
 		} else {
 			state = ac.getState(state, v)
-			if _, ok := ac.output[state]; ok {
+			if ac.output[state] != 0 {
 				return true
 			}
 		}

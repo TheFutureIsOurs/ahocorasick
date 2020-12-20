@@ -1,5 +1,23 @@
 # ahocorasick
-Aho Corasick算法基于双数组Trie树的一种极速实现。可用于全文匹配，模糊匹配等。
+Aho Corasick算法基于双数组Trie树的一种极速实现。可用于模糊匹配，违禁词标记。
+
+注意：该算法为了更高的性能，针对输出的构造做了优化，仅会返回最长命中项。
+
+如：违禁词词典为：
+	
+	he
+	she
+
+输入为: ushe，则仅返回的最长命中为：she.(因为在she结束时，本应该输出she和he，但是由于she比he更长，故只返回she。)
+
+
+常用使用场景为：
+>1.聊天时，对用户输入的query进行命中违禁词时进行屏蔽。
+>2.判断用户输入词是否命中了违禁词黑名单，然后就行后续逻辑处理。
+
+等需要高性能模糊匹配的场景。
+
+
 
 
 # 如何使用
@@ -58,14 +76,13 @@ dictionary := []string{"hers", "his", "she", "he"}
 
 ac, err := ahocorasick.Build(dictionary)
 
-search := ac.MultiPatternSearch([]rune("ushers")) // 会返回所有命中的字符串
+search := ac.MultiPatternSearch([]rune("ushers")) // 会返回所有命中的最长字符串
 
 /*
 // 返回命中的所有字符串列表如下。
 // 字符串在原字符串开始的位置&结束位置&命中的字符串
 // 原字符串起始值为0
 1	3	she
-2	3	he
 2	5	hers
 */
 
@@ -80,6 +97,7 @@ for _, v := range search {
 性能：
 
 对比一个star数较多的[cloudflare/ahocorasick](https://github.com/cloudflare/ahocorasick)
+并返回相同的结果（使用api:MultiPatternIndexes(content []rune) []int）进行对比（对比代码见test文件）。
 
 字典：dictionary.txt 字符串个数：153151。字符数：401552
 
@@ -95,12 +113,12 @@ go版本：1.15
 
 待匹配前先进行一次gc(runtime.Gc())
 
-| 仓库                       | 一次gc时间(ms)|  100遍全文匹配(ms)  |inuse_space|
-| --------                   | -----:  | :----:  | :----: |
-| cloudflare/ahocorasick     | 686  |   14910     |4.67G|
-| TheFutureIsOurs/ahocorasick| 15   |   10334   |31.78M|
+| 仓库                       | 一次gc时间(ms)|  100遍全文匹配(ms)  |inuse_space|inuse_objects|
+| --------                   | -----:  | :----:  | :----: |:----:|
+| cloudflare/ahocorasick     | 686  |   14910     |4.67G|  360455|
+| TheFutureIsOurs/ahocorasick| 0   |   5341       |14.2M|  4  |
 
-可以看出，性能比cloudflare/ahocorasick 快30%（检索一遍81.5w的字符仅需103ms）,得益于双数组实现，执行一次gc的时间大幅下降。另外占用内存仅为31.78M.
+可以看出，性能比cloudflare/ahocorasick 快64%（检索一遍81.5w的字符仅需54ms）,得益于双数组实现和对输出项的优化，执行一次gc的时间可以忽略不记(持有的指针仅为四个数组header)。另外占用内存仅为14.2M.
 
 
 

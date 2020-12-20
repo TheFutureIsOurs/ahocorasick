@@ -93,16 +93,16 @@ func TestBuild(t *testing.T) {
 }
 
 func TestAb(t *testing.T) {
-
-	kws := []string{
-		"hers", "his", "she", "he",
-	}
-
 	/*
 		kws := []string{
-			"中华人民共和国", "中华人民", "人民共和国", "中华人民",
+			"hers", "his", "she", "he",
 		}
 	*/
+
+	kws := []string{
+		"中华人民共和国", "中华人民", "人民共和国", "中华人民",
+	}
+
 	/*
 		kws := []string{
 			"一", "群", "一群羊",
@@ -114,8 +114,8 @@ func TestAb(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	//search := ac.MultiPatternSearch([]rune("中华人民共和国"))
-	search := ac.MultiPatternSearch([]rune("ushers"))
+	search := ac.MultiPatternSearch([]rune("中华人民共和国"))
+	//search := ac.MultiPatternSearch([]rune("ushers"))
 	//search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
