@@ -405,3 +405,22 @@ func (ac *Ac) MultiPatternIndexes(content []rune) []int {
 	}
 	return hits
 }
+
+// MultiPatternHit return is the content is hit dictionary,
+// it will return when first find
+func (ac *Ac) MultiPatternHit(content []rune) bool {
+	state := rootIndex
+	for _, v := range content {
+	start:
+		if ac.getState(state, v) == failState {
+			state = ac.fail[state]
+			goto start
+		} else {
+			state = ac.getState(state, v)
+			if _, ok := ac.output[state]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
