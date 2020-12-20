@@ -359,7 +359,7 @@ type Hit struct {
 	Value []rune
 }
 
-// MultiPatternSearch ...
+// MultiPatternSearch return all find begin end and value
 func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
 	hits := []Hit{}
 	state := rootIndex
@@ -378,6 +378,27 @@ func (ac *Ac) MultiPatternSearch(content []rune) []Hit {
 						Value: content[k-vv+1 : k+1],
 					}
 					hits = append(hits, hit)
+				}
+			}
+		}
+	}
+	return hits
+}
+
+// MultiPatternIndexes return the all find indexes of the content
+func (ac *Ac) MultiPatternIndexes(content []rune) []int {
+	hits := []int{}
+	state := rootIndex
+	for k, v := range content {
+	start:
+		if ac.getState(state, v) == failState {
+			state = ac.fail[state]
+			goto start
+		} else {
+			state = ac.getState(state, v)
+			if val, ok := ac.output[state]; ok {
+				for _, vv := range ac.value[val] {
+					hits = append(hits, k-vv+1)
 				}
 			}
 		}

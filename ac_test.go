@@ -77,15 +77,17 @@ func TestBuild(t *testing.T) {
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("测试文件加载时间(ms)", runTime)
 	start = time.Now().UnixNano()
-	result := ac.MultiPatternSearch(content)
-	search := ac.MultiPatternSearch([]rune("一群"))
-	for _, v := range search {
-		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
-	}
+	ac.MultiPatternIndexes(content)
+	/*
+		search := ac.MultiPatternSearch([]rune("一群"))
+		for _, v := range search {
+			fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
+		}
+	*/
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("检索时间(ms)", runTime)
 
-	writeFile("result2", result)
+	//writeFile("result2", result)
 
 }
 
