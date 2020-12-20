@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -92,19 +93,21 @@ func TestBuild(t *testing.T) {
 }
 
 func TestAb(t *testing.T) {
-	/*
-		kws := []string{
-			"hers", "his", "she", "he",
-		}
-	*/
+
+	kws := []string{
+		"hers", "his", "she", "he",
+	}
+
 	/*
 		kws := []string{
 			"中华人民共和国", "中华人民", "人民共和国", "中华人民",
 		}
 	*/
-	kws := []string{
-		"一", "群", "一群羊",
-	}
+	/*
+		kws := []string{
+			"一", "群", "一群羊",
+		}
+	*/
 	ac, err := Build(kws)
 	//ac, err := Build(kws)
 	//ac, err := BuildFromFile("./dictionary.txt")
@@ -112,13 +115,31 @@ func TestAb(t *testing.T) {
 		fmt.Println(err)
 	}
 	//search := ac.MultiPatternSearch([]rune("中华人民共和国"))
-	//search := ac.MultiPatternSearch([]rune("ushers"))
-	search := ac.MultiPatternSearch([]rune("一群"))
+	search := ac.MultiPatternSearch([]rune("ushers"))
+	//search := ac.MultiPatternSearch([]rune("一群"))
 	for _, v := range search {
 		fmt.Printf("%d\t%d\t%s\n", v.Begin, v.End, string(v.Value))
 	}
 }
 
-func TestWord(t *testing.T) {
-	fmt.Println([]rune("一"), []rune("群"))
+func TestMulti(t *testing.T) {
+	start := time.Now().UnixNano()
+	ac, err := BuildFromFile("./dictionary.txt")
+	fmt.Println(err)
+	runTime := (time.Now().UnixNano() - start) / 1000 / 1000
+	fmt.Println("字典加载时间(ms)", runTime)
+	start = time.Now().UnixNano()
+	content := readFile("./text.txt")
+	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
+	fmt.Println("测试文件加载时间(ms)", runTime)
+	start = time.Now().UnixNano()
+	runtime.GC()
+	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
+	fmt.Println("gc时间(ms)", runTime)
+	start = time.Now().UnixNano()
+	for i := 0; i < 100; i++ {
+		ac.MultiPatternIndexes(content)
+	}
+	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
+	fmt.Println("检索时间(ms)", runTime)
 }

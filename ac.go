@@ -1,5 +1,6 @@
 /*
  * @Author: Daiming Liu (xingrufeng)
+ * Copyright (C) Daiming Liu (xingrufeng)
  */
 
 package ahocorasick
