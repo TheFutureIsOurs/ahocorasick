@@ -132,6 +132,7 @@ func TestMulti(t *testing.T) {
 	content := readFile("./text.txt")
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
 	fmt.Println("测试文件加载时间(ms)", runTime)
+	runtime.GC()
 	start = time.Now().UnixNano()
 	runtime.GC()
 	runTime = (time.Now().UnixNano() - start) / 1000 / 1000
