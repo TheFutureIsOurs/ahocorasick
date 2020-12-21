@@ -133,6 +133,7 @@ for _, v := range search {
 ```
 
 
+在构建Double Array trie时，受到了[darts-java](https://github.com/komiya-atsushi/darts-java)开源项目的启发，在此深表感谢
 
 
 
