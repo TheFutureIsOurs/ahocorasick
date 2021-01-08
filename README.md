@@ -1,81 +1,109 @@
 # ahocorasick
-Aho Corasick算法基于双数组Trie树的一种极速实现。可用于模糊匹配，违禁词标记。
+An extremely fast implementation of Aho Corasick algorithm based on Double Array Trie.Can be used for fuzzy matching, prohibited word marking.
 
-常用使用场景为：
->1.聊天时，对用户输入的query进行命中违禁词时进行屏蔽。
->
->2.判断用户输入词是否命中了违禁词黑名单，然后就行后续逻辑处理。
+[中文](https://github.com/TheFutureIsOurs/ahocorasick/blob/master/README-ZH.md)
 
-等需要高性能模糊匹配的场景。
+Common usage scenarios are:
 
-### 优化
+> 1.When chatting, block when the user-entered
+qury hits a prohibited word.  
 
-本算法除了基于双数组进行构建外，还做有额外的优化，保证更高的效率：
+> 2.Determine if the user input word hits the prohibited word blacklist,and then follow up with logic.  
 
-1.在构造算法时，双数组和fail指针及输出项会同时构建，大幅度提升构建速度，减少字典构建时间。
+> 3.other scenarios that require high-performance fuzzy matching.  
 
-2.压缩输出项，减少构建时长及内存占用及gc。
+### Characteristic
 
-3.压缩了叶子节点，减少内存占用，提升检索效率。
+In addition to the construction based on double arrays, the algorithm also has additional optimization to ensure higher efficiency
 
-对压缩输出项的解释：
+> 1.When constructing the algorithm, the double array and the fail pointer and output items are built at the same time, greatly increasing the speed of construction and reducing the time it takes to build a dictionary.  
 
-如：违禁词词典为：
-	
-	he
+> 2.Compress the output items to reduce build time and memory useage and gc.  
+
+> 3.Compressed leaf nodes, reduced memory consumption, improve retrieval efficiency.  
+
+Explanation of compressed output items: 
+
+e.g. the prohibited word dictionary is:
+
+	he 
 	she
 
-输入为: ushe，则返回的命中项为：she.
+The input is:  ushe,then the returned hit item is: she 
 
-解释：如果不做输出项压缩，则命中项为：he,she；其最长输出项为she。
+Explanation: 
 
-考虑到在实际业务中，不管是对违禁词做屏蔽（如上文中的ushe，屏蔽违禁词后为u***），还是只判断是否命中了违禁词，都不需要冗余的输出项，对输出项做压缩，不仅可以减少构建时长，还能减少内存占用，对于go来说，还可以减少gc扫描。
+If we don't do output compression, the hit item is:he,she;  
+
+Considering that in practice, whether it is blocking prohibited words (e.g., ushe above, blockingprohibited words afteru,) 
+or just determining whether a prohibited word has been hit,
+
+there is no need for redundant output items, 
+
+compression of output items, not only can reduce the build time, but also reduce memory consumption, 
+
+for go, can also reduce gc scanning.  
 
 
-### 性能
+### Performance Compare 
 
-对比一个star数较多的[cloudflare/ahocorasick](https://github.com/cloudflare/ahocorasick)
-并返回相同的结果（使用api:MultiPatternIndexes(content []rune) []int）进行对比（对比代码见test文件）。
+ A popular project [cloudflare/ahocorasick](https://github.com/cloudflare/ahocorasick) and 
+ return the same results (using api:MultiPatternIndexes(content) (see test file forcomparison code).  
 
-字典：dictionary.txt 字符串个数：153151。字符数：401552 （平均每条2.6个字符）
+Dictionary:
+> dictionary.txt
+> 
+> Number of strings: 153151. 
+> 
+> Number of characters: 401552 (average 2.6 characters per article)
 
-待检索文件：text.txt 字符数：815006
+File to be retrieved: 
 
-（字典和待检索文件已在仓库内）
+> text.txt
+> 
+> Characters: 815006
+> 
 
-运行机器：联想小新pro13 Ryzen 5 3550H
+Dictionary and file to be retrieved are already in the project
 
-对待检索文件匹配100遍
+Running machine: 
 
-go版本：1.15
+Lenovo Small New Pro13 Ryzen 5 3550H 
 
-待匹配前先进行一次gc(runtime.Gc())
+Match the file to be retrieved 100 times
 
-| 仓库                       |字典构建时间(ms)| 一次gc时间(ms)|  100遍全文匹配(ms)  |inuse_space|inuse_objects|
+go Version: 1.15 
+
+ gc before matching (runtime. Gc())
+
+| Warehouse   |Dictionary BuildTime(ms)| One gc Time(ms)|  100 full-text matches(ms)  |inuse_space|inuse_objects|
 | --------                   |-----:| -----:  | :----:  | :----: |:----:|
 | cloudflare/ahocorasick     |59| 686  |   14910     |4.67G|  360455|
 | TheFutureIsOurs/ahocorasick|2431| 0   |   5341       |14.2M|  4  |
 
-可以看出，性能比cloudflare/ahocorasick快64%（检索一遍81.5w的字符仅需54ms）,得益于双数组实现和对输出项的优化，执行一次gc的时间可以忽略不记(持有的指针仅为四个数组header)。另外占用内存仅为14.2M。
+As you can see, performance is 64% faster than cloudflare/ahocorasick (retrieving 81.5w characters takes only 54ms), thanks to double array implementations and optimization of output items, the time to perform a gc can be ignored (only four array headers are held). It also uses only 14.2M of memory.  
 
-但得益于上面的各种优化，使得构建时间优化到2.4s，虽然仍较cloudflare/ahocorasick长，但是考虑到构建时较复杂，而且大部分应用只需在启动时构建一次，秒级对于感官时间较短，构建时长可控（笔者用一个业务的61w行黑名单词测试，构建时间3.5s），但带来的更高的可量化的各项指标收益，这个是值得的。
+Thanks to the various optimizations above, the build time is optimized to 2.4s, although it is still longer than cloudflare/ahocorasick, 
+
+but considering that the build time is more complex, and most applications only need to be built once at startup, the second stage for the sensory time is short, the build time is controllable (the author with a business 61w line black word test, build time 3.5s), but the higher quantifiable indicators of the return, this is worth it.  
 
 
 
 
-# 如何使用
+# How to use 
 
-### 下载
+### Download
 
->go get -u github.com/TheFutureIsOurs/ahocorasick
+> go get -u github.com/TheFutureIsOurs/ahocorasick
 
-### 使用
+
+### Useage
 
 import "github.com/TheFutureIsOurs/ahocorasick"
 
-第一步：构造算法。
+First step: construct an algorithm.  
 
-可以通过字符串列表构造：
+It can be constructed from a list of strings:
 
 ```go
 
@@ -84,49 +112,58 @@ dictionary := []string{"hers", "his", "she", "he"}
 ac, err := ahocorasick.Build(dictionary)
 
 ```
-或通过文件构造:
 
-dictionary.txt文件内容为：
+or by file construction:
+
+dictionary.txt file content is: 
 
 	hers
 	his
 	she
 	he
-
+ 
 ```go
 
 ac, err := BuildFromFile("./dictionary.txt")
 
 ```
 
-第二步：进行匹配。
+Step 2: Match.  
 
-api列表：
+api list:
 
-MultiPatternSearch(content []rune) []Hit 返回所有命中的字符串在原字符串中的起终点及字符串。
+MultiPatternSearch(content []rune) []Hit
 
-MultiPatternIndexes(content []rune) []int 返回所有命中的字符串在原字符中的起点。
+> returns all hit strings at the beginning and end of the original string andstrings.  
 
-MultiPatternHit(content []rune) bool 返回content是否命中了字典。如果命中了，会立即返回true，不会再继续查询下去。
+MultiPatternIndexes(content []rune) []int
 
-一个完整的例子如下：
+> returns the starting point of all hit strings in the original character.  
+
+MultiPatternHit(content []rune) bool
+
+> returns whether the content hit the dictionary. If hit, true is returned immediately and the query is not continued.  
+
+A complete example is as follows:
 
 ```go
 
-// 从字符串列表构造
+// Constructs dictionary from the list of 
 
 dictionary := []string{"hers", "his", "she", "he"}
 
 ac, err := ahocorasick.Build(dictionary)
 
-search := ac.MultiPatternSearch([]rune("ushers")) // 会返回所有命中的最长字符串
+search := ac.MultiPatternSearch([]rune("ushers")) // returns the longest string of all hits
 
 /*
-// 返回命中的所有字符串列表如下。
-// 字符串在原字符串开始的位置&结束位置&命中的字符串
-// 原字符串起始值为0
+
+// Returns a list of all strings hit as follows:
+// The starting position of the string at the beginning and end of the original string and the hit string
+// The startingvalue of the original string is 0
 1	3	she
 2	5	hers
+
 */
 
 for _, v := range search {
@@ -138,9 +175,9 @@ for _, v := range search {
 ```
 
 
-在构建Double Array trie时，受到了[darts-java](https://github.com/komiya-atsushi/darts-java)开源项目的启发，在此深表感谢
+### Thanks 
 
-
+The double array trie was inspired by the open source project of the [darts-java](https://github.com/komiya-atsushi/darts-java)
 
 
 
