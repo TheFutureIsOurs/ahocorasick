@@ -137,6 +137,11 @@ for _, v := range search {
 
 ```
 
+### 由来
+
+[见博文](https://www.imflybird.cn/2020/12/20/%E4%BB%8E%E4%B8%80%E4%B8%AA%E6%A8%A1%E7%B3%8A%E8%AF%8D%E6%9F%A5%E8%AF%A2%E9%9C%80%E6%B1%82%E7%9A%84%E5%A4%84%E7%90%86%E6%96%B9%E6%A1%88%E8%AE%A8%E8%AE%BA%E5%88%B0%E4%B8%80%E7%A7%8D%E6%9E%81%E9%80%9F%E5%8C%B9%E9%85%8D%E6%96%B9%E6%A1%88%E7%9A%84%E5%AE%9E%E7%8E%B0/)
+
+### 感谢
 
 在构建Double Array trie时，受到了[darts-java](https://github.com/komiya-atsushi/darts-java)开源项目的启发，在此深表感谢
 
