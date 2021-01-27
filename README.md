@@ -81,7 +81,7 @@ go Version: 1.15
 | cloudflare/ahocorasick     |59| 686  |   14910     |4.67G|  360455|
 | TheFutureIsOurs/ahocorasick|2431| 0   |   5341       |14.2M|  4  |
 
-As you can see, performance is 64% faster than cloudflare/ahocorasick (retrieving 81.5w characters takes only 54ms), thanks to double array implementations and optimization of output items, the time to perform a gc can be ignored (only four array headers are held). It also uses only 14.2M of memory.  
+As you can see, performance is 64% faster than cloudflare/ahocorasick (retrieving 81.5w characters takes only 54ms), thanks to double array implementations and optimization of output items, the time to perform a gc can be ignored (only four slice headers are held). It also uses only 14.2M of memory.  
 
 Thanks to the various optimizations above, the build time is optimized to 2.4s, although it is still longer than cloudflare/ahocorasick, 
 
